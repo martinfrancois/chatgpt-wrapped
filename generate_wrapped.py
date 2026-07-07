@@ -350,7 +350,23 @@ def bar_chart(items: list[tuple[str, int]], title: str, color: str, width: int =
         parts.append(f'<text x="{tick_x:.1f}" y="{base_y + 24}" text-anchor="middle" class="axis-label">{human_int(tick_value)}</text>')
     parts.append(f'<line x1="{left}" y1="{base_y}" x2="{left + chart_w}" y2="{base_y}" class="axis-line"/>')
     parts.append("</svg>")
-    return "".join(parts)
+    mobile_rows = []
+    for label, value in items:
+        percent = 100 * value / max_value
+        mobile_rows.append(
+            '<div class="mobile-bar-row">'
+            f'<div class="mobile-bar-head"><span>{esc(label)}</span><strong>{human_int(value)}</strong></div>'
+            f'<span class="mobile-bar-track"><span style="width:{percent:.2f}%;background:{color}"></span></span>'
+            "</div>"
+        )
+    return (
+        '<div class="chart-desktop">'
+        + "".join(parts)
+        + '</div><div class="mobile-bars">'
+        + f"<h3>{esc(title)}</h3>"
+        + "".join(mobile_rows)
+        + "</div>"
+    )
 
 
 def line_chart(items: list[tuple[str, int]], title: str, color: str) -> str:
@@ -403,9 +419,6 @@ def line_chart(items: list[tuple[str, int]], title: str, color: str) -> str:
 
 def heatmap(matrix: dict[tuple[int, int], int], unit_label: str = "messages you wrote") -> str:
     days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    width, height = 1120, 410
-    left, top_pad = 78, 58
-    cell_w, cell_h = 40, 34
     max_value = max(matrix.values()) if matrix else 1
 
     def heat_attrs(value: int) -> str:
@@ -414,41 +427,101 @@ def heatmap(matrix: dict[tuple[int, int], int], unit_label: str = "messages you 
         opacity = 0.20 + 0.80 * (value / max_value if max_value else 0)
         return f'fill="#00AAFF" opacity="{opacity:.3f}"'
 
-    parts = [f'<svg class="chart" role="img" aria-label="Message activity heatmap" viewBox="0 0 {width} {height}">']
-    parts.append('<text x="0" y="22" class="chart-title">Your messages by weekday and hour, total count</text>')
-    for hour in range(24):
-        if hour % 3 == 0:
-            parts.append(f'<text x="{left + hour * cell_w + cell_w / 2:.1f}" y="48" text-anchor="middle" class="axis-label">{hour:02d}</text>')
-    for day_index, day_name in enumerate(days):
-        y = top_pad + day_index * cell_h
-        parts.append(f'<text x="65" y="{y + 21}" text-anchor="end" class="axis-label">{day_name}</text>')
+    def svg(
+        *,
+        width: int,
+        height: int,
+        left: int,
+        top_pad: int,
+        cell_w: int,
+        cell_h: int,
+        radius: int,
+        hour_step: int,
+        legend_gap: int,
+        legend_swatches: list[int],
+        title: str,
+    ) -> str:
+        parts = [
+            f'<svg class="chart" role="img" aria-label="Message activity heatmap" viewBox="0 0 {width} {height}">'
+        ]
+        parts.append(f'<text x="0" y="22" class="chart-title">{esc(title)}</text>')
         for hour in range(24):
-            value = matrix.get((day_index, hour), 0)
-            tooltip = f"{day_name} {hour:02d}:00, {value} {unit_label}"
+            if hour % hour_step == 0:
+                parts.append(
+                    f'<text x="{left + hour * cell_w + cell_w / 2:.1f}" y="{top_pad - 10}" text-anchor="middle" class="axis-label">{hour:02d}</text>'
+                )
+        for day_index, day_name in enumerate(days):
+            y = top_pad + day_index * cell_h
             parts.append(
-                f'<rect class="hover-target" {tooltip_attr(tooltip)} x="{left + hour * cell_w}" y="{y}" '
-                f'width="{cell_w - 4}" height="{cell_h - 4}" rx="7" {heat_attrs(value)}/>'
+                f'<text x="{left - 13}" y="{y + cell_h * .62:.1f}" text-anchor="end" class="axis-label">{day_name}</text>'
             )
-    legend_y = top_pad + len(days) * cell_h + 20
-    legend_values = [0]
-    if max_value > 1:
-        legend_values.extend([max(1, round(max_value * 0.25)), max(1, round(max_value * 0.5))])
-    legend_values.append(max_value)
-    deduped_legend: list[int] = []
-    for value in legend_values:
-        if value not in deduped_legend:
-            deduped_legend.append(value)
-    parts.append(f'<text x="{left}" y="{legend_y}" class="axis-label">Legend: total {esc(unit_label)} in each weekday/hour bucket; peak sets the color scale</text>')
-    for index, value in enumerate(deduped_legend):
-        x_pos = left + index * 170
+            for hour in range(24):
+                value = matrix.get((day_index, hour), 0)
+                tooltip = f"{day_name} {hour:02d}:00, {value} {unit_label}"
+                parts.append(
+                    f'<rect class="hover-target" {tooltip_attr(tooltip)} x="{left + hour * cell_w}" y="{y}" '
+                    f'width="{cell_w - 4}" height="{cell_h - 4}" rx="{radius}" {heat_attrs(value)}/>'
+                )
+        legend_y = top_pad + len(days) * cell_h + 22
         parts.append(
-            f'<rect class="hover-target" {tooltip_attr(f"{value} {unit_label}")} x="{x_pos}" '
-            f'y="{legend_y + 13}" width="30" height="22" rx="7" {heat_attrs(value)}/>'
+            f'<text x="{left}" y="{legend_y}" class="axis-label">Total {esc(unit_label)} per weekday/hour; peak sets color</text>'
         )
-        label = "0" if value == 0 else ("peak " + human_int(value) if value == max_value else human_int(value))
-        parts.append(f'<text x="{x_pos + 39}" y="{legend_y + 30}" class="axis-label">{esc(label)}</text>')
-    parts.append("</svg>")
-    return "".join(parts)
+        for index, value in enumerate(legend_swatches):
+            x_pos = left + index * legend_gap
+            parts.append(
+                f'<rect class="hover-target" {tooltip_attr(f"{value} {unit_label}")} x="{x_pos}" '
+                f'y="{legend_y + 13}" width="{max(18, cell_w - 10)}" height="{max(14, cell_h - 12)}" rx="{radius}" {heat_attrs(value)}/>'
+            )
+            label = "0" if value == 0 else ("peak " + human_int(value) if value == max_value else human_int(value))
+            parts.append(
+                f'<text x="{x_pos + max(26, cell_w)}" y="{legend_y + 29}" class="axis-label">{esc(label)}</text>'
+            )
+        parts.append("</svg>")
+        return "".join(parts)
+
+    desktop_legend = [0]
+    if max_value > 1:
+        desktop_legend.extend([max(1, round(max_value * 0.25)), max(1, round(max_value * 0.5))])
+    desktop_legend.append(max_value)
+    desktop_legend = list(dict.fromkeys(desktop_legend))
+
+    mobile_legend = [0]
+    if max_value > 1:
+        mobile_legend.append(max(1, round(max_value * 0.5)))
+    mobile_legend.append(max_value)
+    mobile_legend = list(dict.fromkeys(mobile_legend))
+
+    return (
+        '<div class="heatmap-desktop">'
+        + svg(
+            width=1120,
+            height=410,
+            left=78,
+            top_pad=58,
+            cell_w=40,
+            cell_h=34,
+            radius=7,
+            hour_step=3,
+            legend_gap=170,
+            legend_swatches=desktop_legend,
+            title="Your messages by weekday and hour, total count",
+        )
+        + '</div><div class="heatmap-mobile">'
+        + svg(
+            width=560,
+            height=265,
+            left=44,
+            top_pad=47,
+            cell_w=20,
+            cell_h=22,
+            radius=4,
+            hour_step=6,
+            legend_gap=125,
+            legend_swatches=mobile_legend,
+            title="Messages by weekday/hour, totals",
+        )
+        + "</div>"
+    )
 
 
 def table(headers: list[str], rows: list[list[object]], sortable: bool = False) -> str:
@@ -843,12 +916,12 @@ def build_html(data: dict[str, object]) -> str:
     .badges{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:30px}.badge,.panel{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.028));border:1px solid var(--line);border-radius:6px;box-shadow:8px 8px 0 rgba(0,170,255,.08),0 18px 50px rgba(0,0,0,.3)}
     .badge{padding:19px}.badge span{display:block;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:0}.badge strong{display:block;margin-top:9px;font-size:28px;font-weight:700;line-height:1.12}.badge em{display:block;margin-top:9px;color:var(--muted);font-style:normal;font-size:16px;line-height:1.4}
     .grid{display:grid;gap:26px;margin-top:30px}.two,.three{grid-template-columns:minmax(0,1fr)}.panel{padding:30px;overflow:visible}.statline{display:flex;justify-content:space-between;gap:16px;border-top:1px solid rgba(255,255,255,.12);padding:14px 0;color:var(--muted)}.statline strong{color:var(--ink)}
-    .chart{width:100%;height:auto;min-width:0;display:block}.chart-title{fill:#f7fbff;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-weight:700;font-size:27px}.axis-label{fill:#abb6be;font-size:17px}.value-label{fill:#f7fbff;font-size:17px;font-weight:700}.grid-line{stroke:rgba(255,255,255,.14);stroke-width:1}.axis-line{stroke:rgba(255,255,255,.36);stroke-width:1}.hover-target{cursor:help;outline:none;pointer-events:all}.hover-target:focus{filter:brightness(1.25)}
+    .chart{width:100%;height:auto;min-width:0;display:block}.chart-title{fill:#f7fbff;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-weight:700;font-size:27px}.axis-label{fill:#abb6be;font-size:17px}.value-label{fill:#f7fbff;font-size:17px;font-weight:700}.grid-line{stroke:rgba(255,255,255,.14);stroke-width:1}.axis-line{stroke:rgba(255,255,255,.36);stroke-width:1}.hover-target{cursor:help;outline:none;pointer-events:all}.hover-target:focus{filter:brightness(1.25)}.heatmap-mobile,.mobile-bars{display:none}.mobile-bars h3{font-size:24px;margin:0 0 12px}.mobile-bar-row{padding:11px 0;border-bottom:1px solid rgba(255,255,255,.1)}.mobile-bar-row:last-child{border-bottom:0}.mobile-bar-head{display:flex;justify-content:space-between;gap:14px;align-items:baseline;color:#f7fbff;font-size:16px;line-height:1.3}.mobile-bar-head span{overflow-wrap:anywhere}.mobile-bar-head strong{font-size:16px;white-space:nowrap}.mobile-bar-track{display:block;height:9px;margin-top:8px;border-radius:999px;background:rgba(255,255,255,.10);overflow:hidden}.mobile-bar-track span{display:block;height:100%;border-radius:999px}
     .chart-tooltip{position:fixed;left:0;top:0;z-index:50;max-width:min(320px,calc(100vw - 28px));padding:10px 12px;border:1px solid rgba(0,170,255,.55);border-radius:6px;background:rgba(5,8,10,.96);color:#f7fbff;box-shadow:0 18px 48px rgba(0,0,0,.42);font-size:15px;font-weight:700;line-height:1.35;opacity:0;pointer-events:none;transform:translate(-9999px,-9999px);transition:opacity .08s ease}.chart-tooltip.is-visible{opacity:1}
     table{width:100%;border-collapse:collapse;font-size:18px;line-height:1.44}th{text-align:left;color:#dce9ef;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;font-weight:700;text-transform:uppercase;border-bottom:2px solid var(--signal);padding:14px 10px;letter-spacing:0;white-space:normal}td{border-bottom:1px solid rgba(255,255,255,.1);padding:15px 10px;vertical-align:top;color:#f7fbff;overflow-wrap:anywhere}.sortable th{cursor:pointer}.sortable th[data-direction=asc]:after{content:" ↑";color:#8ea0aa}.sortable th[data-direction=desc]:after{content:" ↓";color:#8ea0aa}.muted{color:var(--muted)}
     .keyword-tabs>input{position:absolute;opacity:0;pointer-events:none}.tab-controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.tab-controls label{border:1px solid var(--line);border-radius:999px;padding:10px 13px;background:var(--wash);font-size:15px;font-weight:700;cursor:pointer}.tab-panel{display:none}#kw-mixed:checked~.tab-controls label[for=kw-mixed],#kw-user:checked~.tab-controls label[for=kw-user],#kw-assistant:checked~.tab-controls label[for=kw-assistant]{background:var(--signal);color:#021014;border-color:var(--signal)}#kw-mixed:checked~.tab-panels .kw-mixed-panel,#kw-user:checked~.tab-panels .kw-user-panel,#kw-assistant:checked~.tab-panels .kw-assistant-panel{display:block}
     @media(max-width:980px){.badges,.two,.three{grid-template-columns:1fr}.panel{box-shadow:5px 5px 0 rgba(0,170,255,.08)}}
-    @media(max-width:700px){main{width:calc(100% - 24px);padding-top:18px}.slide{padding:42px 0}.hero-copy,.sub{font-size:20px}.big-number{font-size:clamp(50px,16vw,64px)}h2{font-size:clamp(29px,8vw,36px)}.panel{padding:18px;overflow:hidden}table,tbody,tr,td{display:block;width:100%}thead{display:none}tbody tr{border-bottom:1px solid rgba(255,255,255,.12);padding:10px 0}tbody tr:last-child{border-bottom:0}td{border-bottom:0;padding:8px 0;display:grid;grid-template-columns:minmax(94px,36%) minmax(0,1fr);gap:12px}td:before{content:attr(data-label);color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0}.statline{display:block}.statline strong{display:block;margin-top:4px}}
+    @media(max-width:700px){main{width:calc(100% - 24px);padding-top:18px}.slide{padding:42px 0}.hero-copy,.sub{font-size:20px}.big-number{font-size:clamp(50px,16vw,64px)}h2{font-size:clamp(29px,8vw,36px)}.panel{padding:18px;overflow:hidden}.heatmap-desktop,.chart-desktop{display:none}.heatmap-mobile,.mobile-bars{display:block}table,tbody,tr,td{display:block;width:100%}thead{display:none}tbody tr{border-bottom:1px solid rgba(255,255,255,.12);padding:10px 0}tbody tr:last-child{border-bottom:0}td{border-bottom:0;padding:8px 0;display:grid;grid-template-columns:minmax(94px,36%) minmax(0,1fr);gap:12px}td:before{content:attr(data-label);color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0}.statline{display:block}.statline strong{display:block;margin-top:4px}}
     """
     sort_script = """
 document.querySelectorAll("table.sortable").forEach((table) => {
