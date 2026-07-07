@@ -994,36 +994,6 @@ def build_html(data):
         for label, value in word_split_rows
         if value
     ]
-    definition_rows = [
-        [
-            "Your messages",
-            "Timestamped messages authored by you. Activity charts and busiest-day counts use this narrower metric.",
-        ],
-        [
-            "Saved messages",
-            "Messages saved in the export: your messages, ChatGPT replies, reasoning traces, and other preserved message entries. Shared branch messages are counted once.",
-        ],
-        [
-            "Reasoning and traces",
-            "Assistant reasoning details saved in the export. These explain spikes like 2026-03-16; they are separated from your activity.",
-        ],
-        [
-            "Prose keywords",
-            "Conversation body text only. Reasoning traces, URLs, code blocks, and common code tokens are filtered out.",
-        ],
-        [
-            "Linked/reference sites",
-            "Websites found in message links, ChatGPT citations, and embedded source references.",
-        ],
-        [
-            "Conversations including code",
-            "Conversations where at least one code block was detected. This is not code or test coverage.",
-        ],
-        [
-            "Alternate branches",
-            "How many complete conversation paths exist. Shared messages are counted once, even when they appear in more than one branch.",
-        ],
-    ]
     cards = "".join([
         kpi("Conversations", human_int(len(conversations)), f"{human_int(branches)} total branch versions"),
         kpi("Your messages", human_int(data["user_message_total"]), f"{human_int(active_user_days)} days with at least one message from you"),
@@ -1032,7 +1002,7 @@ def build_html(data):
         kpi("Longest daily streak", f"{human_int(streak_len)} days", f"{streak_start} to {streak_end}" if streak_start and streak_end else "no dated user messages"),
         kpi("All saved words", human_int(data["total_words"]), "split by source below"),
         kpi("Assistant response time", f"{human_duration(percentile(data['response_latencies'], .5))} / {human_duration(percentile(data['response_latencies'], .9))} / {human_duration(percentile(data['response_latencies'], .99))}", f"median / 90th / 99th percentile across {human_int(len(data['response_latencies']))} replies"),
-        kpi("Conversations including code", f"{pct(sum(c['has_code'] for c in conversations), len(conversations)):.1f}%", f"{human_int(sum(c['has_code'] for c in conversations))} conversations"),
+        kpi("Conversations including code", f"{pct(sum(c['has_code'] for c in conversations), len(conversations)):.1f}%", f"{human_int(sum(c['has_code'] for c in conversations))} with detected code blocks"),
     ])
     biggest_words = sorted(conversations, key=lambda c: c["words"], reverse=True)[:12]
     biggest_messages = sorted(conversations, key=lambda c: c["messages"], reverse=True)[:12]
@@ -1228,25 +1198,27 @@ document.querySelectorAll("[data-tooltip]").forEach((target) => {
 <section class="hero"><div><p class="eyebrow">ChatGPT Conversation Field Report</p><h1>Conversation history report</h1><p class="lede">A full-history analysis of your ChatGPT conversations, focused on messages you wrote, with assistant reasoning traces kept separate so spikes and word counts stay legible.</p></div><div class="hero-card"><strong>Export as of {esc(latest_label)}</strong><p>Conversation range starts {esc(first_label)}. Charts use totals; leaderboard tables may include private conversation titles.</p></div></section>
 {signal_strip(monthly_user_messages, 'Messages you wrote by month')}
 <section class="kpis">{cards}</section>
-<p class="section-label">What counts</p>
-<section class="grid two"><div class="panel">{bar_chart(word_split_rows, 'Words by source', '#00AAFF', label_width=230, x_axis_label='Words')}</div><div class="panel"><h2>How to read this report</h2>{table(['Metric','Meaning'], definition_rows)}</div></section>
+<p class="section-label">Words by source</p>
+<section class="grid two"><div class="panel"><p class="caption">Word totals cover all saved text. Reasoning traces are separated from your messages and ChatGPT replies so activity spikes stay easier to interpret.</p>{bar_chart(word_split_rows, 'Words by source', '#00AAFF', label_width=230, x_axis_label='Words')}</div><div class="panel"><h2>Source totals</h2>{table(['Source','Words','Share'], word_split_table)}</div></section>
 <p class="section-label">Activity</p>
+<p class="caption">Message activity charts in this section count timestamped messages authored by you. The conversation-created chart uses conversation start dates.</p>
 <section class="grid two"><div class="panel">{line_chart(monthly_user_messages, 'Your messages by month', '#00AAFF', 'Messages you wrote')}</div><div class="panel">{line_chart(monthly_conversations, 'Conversations created by month', '#FF755F', 'Conversations')}</div></section>
 <section class="grid two"><div class="panel">{line_chart(cumulative_conversations, 'Cumulative conversation count', '#A7B1BD', 'Conversations')}</div><div class="panel">{bar_chart(weekday_rows, 'Your messages by weekday', '#FFC845', label_width=90, x_axis_label='Messages you wrote')}</div></section>
 <p class="section-label">Local time</p>
 <section class="panel wide"><p class="caption">Each square is the total number of messages you wrote in that weekday and hour across the whole export, converted to Europe/Zurich. It is not an average, median, or maximum; brighter cells are closer to the busiest weekday/hour bucket.</p>{heatmap(data['user_weekday_hour'], 'Your message activity by weekday and hour, Europe/Zurich', 'messages you wrote')}</section>
 <p class="section-label">Conversation size and branches</p>
-<section class="grid two"><div class="panel">{histogram(message_counts, [1,2,4,8,16,32,64,128,256,512,1_000_000_000], 'How many messages conversations contain', '#00AAFF', 'Conversations', 'Saved messages')}</div><div class="panel"><p class="caption">Alternate branches are complete conversation paths. Shared messages are counted once, even when they appear in more than one branch.</p>{histogram(branch_counts, [1,2,3,4,5,8,13,21,34,55,1_000_000_000], 'Alternate branches per conversation', '#FF755F', 'Conversations', 'Branches')}</div></section>
+<section class="grid two"><div class="panel"><p class="caption">Saved messages are the unique messages preserved in each conversation, including your messages, ChatGPT replies, reasoning traces, and other saved entries.</p>{histogram(message_counts, [1,2,4,8,16,32,64,128,256,512,1_000_000_000], 'How many messages conversations contain', '#00AAFF', 'Conversations', 'Saved messages')}</div><div class="panel"><p class="caption">Alternate branches are complete conversation paths. Shared messages are counted once, even when they appear in more than one branch.</p>{histogram(branch_counts, [1,2,3,4,5,8,13,21,34,55,1_000_000_000], 'Alternate branches per conversation', '#FF755F', 'Conversations', 'Branches')}</div></section>
 <section class="grid two"><div class="panel">{histogram(durations, [0,.5,1,6,24,72,168,720,2160,8760,1_000_000_000], 'How long conversations lasted', '#A7B1BD', 'Conversations', 'Hours from first to last update')}</div><div class="panel">{histogram(data['response_latencies'], [0,2,5,10,30,60,120,300,600,1800,3600,86400], 'How long ChatGPT took to reply', '#FFC845', 'Replies', 'Seconds')}</div></section>
 <p class="section-label">Language and topics</p>
+<p class="caption">Topic and keyword charts use conversation text. Prose keyword charts filter out reasoning traces, URLs, code blocks, and common code tokens.</p>
 <section class="grid two"><div class="panel">{bar_chart(top(data['topics'], 16), 'Conversation topics', '#00AAFF', label_width=220, x_axis_label='Conversations')}</div><div class="panel">{keyword_tabs(top(data['prose_message_words'], 12), top(data['user_prose_message_words'], 12), top(data['assistant_prose_message_words'], 12))}</div></section>
-<section class="grid three"><div class="panel">{bar_chart(top(data['title_words'], 18), 'Title keywords', '#FF755F', label_width=170, x_axis_label='Uses')}</div><div class="panel">{bar_chart(top(data['code_langs'], 12), 'Code block languages', '#A7B1BD', label_width=130, x_axis_label='Code blocks')}</div><div class="panel">{bar_chart(top(data['domains'], 12), 'Linked/reference sites', '#FFC845', label_width=220, x_axis_label='Links and citations')}</div></section>
+<section class="grid three"><div class="panel">{bar_chart(top(data['title_words'], 18), 'Title keywords', '#FF755F', label_width=170, x_axis_label='Uses')}</div><div class="panel"><p class="caption">Code languages come from detected code blocks and messages saved as code. This is not code or test coverage.</p>{bar_chart(top(data['code_langs'], 12), 'Code block languages', '#A7B1BD', label_width=130, x_axis_label='Code blocks')}</div><div class="panel"><p class="caption">Linked/reference sites are websites found in message links, ChatGPT citations, and embedded source references.</p>{bar_chart(top(data['domains'], 12), 'Linked/reference sites', '#FFC845', label_width=220, x_axis_label='Links and citations')}</div></section>
 <p class="section-label">Year-by-year comparisons</p>
+<p class="caption">Use the year buttons to apply the same time slice to every chart in this section.</p>
 {yearly_section}
-<section class="panel wide"><h2>Busiest Days for Your Messages</h2>{table(['Date','Messages you wrote'], [[day, human_int(count)] for day, count in top_user_days], sortable=True)}</section>
-<section class="grid two"><div class="panel"><h2>Largest conversations by word count</h2>{table(['Title','Updated','Saved messages','Branches','Words'], [[c['title'], c['updated'].strftime('%Y-%m-%d') if c['updated'] else 'unknown', human_int(c['messages']), human_int(c['branches']), human_int(c['words'])] for c in biggest_words], sortable=True)}</div><div class="panel"><h2>Largest conversations by message count</h2>{table(['Title','Updated','Saved messages','Branches','Words'], [[c['title'], c['updated'].strftime('%Y-%m-%d') if c['updated'] else 'unknown', human_int(c['messages']), human_int(c['branches']), human_int(c['words'])] for c in biggest_messages], sortable=True)}</div></section>
-<section class="grid two"><div class="panel"><h2>Conversations with the most branches</h2>{table(['Title','Saved messages','Branches','Words'], [[c['title'], human_int(c['messages']), human_int(c['branches']), human_int(c['words'])] for c in branchy], sortable=True)}</div><div class="panel"><h2>Distribution and conversion checks</h2>{table(['Metric','Value'], stats_rows)}</div></section>
-<section class="panel wide"><h2>Words by source</h2>{table(['Source','Words','Share'], word_split_table)}</section>
+<section class="panel wide"><h2>Busiest Days for Your Messages</h2><p class="caption">This table counts only timestamped messages authored by you, not ChatGPT replies or reasoning traces.</p>{table(['Date','Messages you wrote'], [[day, human_int(count)] for day, count in top_user_days], sortable=True)}</section>
+<section class="grid two"><div class="panel"><h2>Largest conversations by word count</h2><p class="caption">Saved messages are counted once per conversation, even when the same message appears in multiple branches.</p>{table(['Title','Updated','Saved messages','Branches','Words'], [[c['title'], c['updated'].strftime('%Y-%m-%d') if c['updated'] else 'unknown', human_int(c['messages']), human_int(c['branches']), human_int(c['words'])] for c in biggest_words], sortable=True)}</div><div class="panel"><h2>Largest conversations by message count</h2><p class="caption">Words include all saved text in the conversation, with reasoning traces included in this size ranking.</p>{table(['Title','Updated','Saved messages','Branches','Words'], [[c['title'], c['updated'].strftime('%Y-%m-%d') if c['updated'] else 'unknown', human_int(c['messages']), human_int(c['branches']), human_int(c['words'])] for c in biggest_messages], sortable=True)}</div></section>
+<section class="grid two"><div class="panel"><h2>Conversations with the most branches</h2><p class="caption">Branches are complete alternate conversation paths.</p>{table(['Title','Saved messages','Branches','Words'], [[c['title'], human_int(c['messages']), human_int(c['branches']), human_int(c['words'])] for c in branchy], sortable=True)}</div><div class="panel"><h2>Distribution and conversion checks</h2>{table(['Metric','Value'], stats_rows)}</div></section>
 <footer>Built locally from a ChatGPT data export. Export as of {esc(latest_label)}.</footer>
 </main><script>{sort_script}</script></body></html>"""
 
