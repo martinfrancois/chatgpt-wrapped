@@ -1567,7 +1567,7 @@ def reasoning_notice_lines() -> list[str]:
     return [
         "> [!IMPORTANT]",
         "> This file includes reasoning and trace entries from the export.",
-        "> Entries that are not part of the normal visible transcript are marked `[REASONING TRACE]`.",
+        "> Reasoning and trace entries are marked `[REASONING TRACE]`.",
         "",
     ]
 

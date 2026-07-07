@@ -697,8 +697,8 @@ def analyze():
     assistant_message_total = 0
     total_words = 0
     total_chars = 0
-    user_visible_words = 0
-    assistant_visible_words = 0
+    user_message_words = 0
+    assistant_reply_words = 0
     reasoning_words = 0
     tool_words = 0
     system_other_words = 0
@@ -723,7 +723,7 @@ def analyze():
             title_words.update(words(title))
             if conversation_year:
                 yearly_title_words[conversation_year].update(words(title))
-            visible_text = [title]
+            transcript_text = [title]
             conv_has_link = False
             conv_has_code = False
             conv_words = conv_chars = user_words = assistant_words = 0
@@ -774,18 +774,18 @@ def analyze():
                     reasoning_total += 1
                     reasoning_words += word_count
                 elif role in {"user", "assistant"}:
-                    visible_text.append(text)
+                    transcript_text.append(text)
                     message_words.update(msg_words)
                     prose_message_words.update(prose)
                     if message_year:
                         yearly_prose_message_words[message_year].update(prose)
                     if role == "user":
-                        user_visible_words += word_count
+                        user_message_words += word_count
                         user_prose_message_words.update(prose)
                         if message_year:
                             yearly_user_prose_message_words[message_year].update(prose)
                     else:
-                        assistant_visible_words += word_count
+                        assistant_reply_words += word_count
                         assistant_prose_message_words.update(prose)
                         if message_year:
                             yearly_assistant_prose_message_words[message_year].update(prose)
@@ -868,7 +868,7 @@ def analyze():
                         response_latencies.append(delta)
                     pending_user = None
 
-            token_set = set(prose_words("\n".join(visible_text).lower()))
+            token_set = set(prose_words("\n".join(transcript_text).lower()))
             conv_topics = []
             for topic, keywords in TOPICS.items():
                 if token_set & keywords:
@@ -912,8 +912,8 @@ def analyze():
         "assistant_message_total": assistant_message_total,
         "total_words": total_words,
         "total_chars": total_chars,
-        "user_visible_words": user_visible_words,
-        "assistant_visible_words": assistant_visible_words,
+        "user_message_words": user_message_words,
+        "assistant_reply_words": assistant_reply_words,
         "reasoning_words": reasoning_words,
         "tool_words": tool_words,
         "system_other_words": system_other_words,
@@ -980,10 +980,10 @@ def build_html(data):
     latest_message_at = data["latest_message_at"]
     latest_label = latest_message_at.strftime("%Y-%m-%d %H:%M:%S %Z") if latest_message_at else "unknown"
     first_label = min(created).strftime("%Y-%m-%d") if created else "unknown"
-    visible_assistant_messages = sum(c["assistant_messages"] - c["reasoning_messages"] for c in conversations)
+    assistant_reply_messages = sum(c["assistant_messages"] - c["reasoning_messages"] for c in conversations)
     word_split_rows = [
-        ("Your messages", int(data["user_visible_words"])),
-        ("ChatGPT replies", int(data["assistant_visible_words"])),
+        ("Your messages", int(data["user_message_words"])),
+        ("ChatGPT replies", int(data["assistant_reply_words"])),
         ("Reasoning and traces", int(data["reasoning_words"])),
         ("Tool messages", int(data["tool_words"])),
         ("System and other", int(data["system_other_words"])),
@@ -997,7 +997,7 @@ def build_html(data):
     cards = "".join([
         kpi("Conversations", human_int(len(conversations)), f"{human_int(branches)} total branch versions"),
         kpi("Your messages", human_int(data["user_message_total"]), f"{human_int(active_user_days)} days with at least one message from you"),
-        kpi("ChatGPT replies", human_int(visible_assistant_messages), f"{human_int(data['reasoning_total'])} reasoning traces"),
+        kpi("ChatGPT replies", human_int(assistant_reply_messages), f"{human_int(data['reasoning_total'])} reasoning traces"),
         kpi("Most messages in one day", f"{human_int(peak_user_day[1])} messages", f"you wrote on {peak_user_day[0]}"),
         kpi("Longest daily streak", f"{human_int(streak_len)} days", f"{streak_start} to {streak_end}" if streak_start and streak_end else "no dated user messages"),
         kpi("All saved words", human_int(data["total_words"]), "split by source below"),
@@ -1098,11 +1098,11 @@ def build_html(data):
     .hero-card{border-left:2px solid var(--line);padding-left:20px}.hero-card strong{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--signal);font-size:19px;margin-bottom:8px}.hero-card p{margin:0;color:var(--muted);font-size:16px;line-height:1.5}
     .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.kpi,.panel{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025));border:1px solid var(--line);box-shadow:0 14px 34px rgba(0,0,0,.32)}
     .kpi{border-radius:6px;padding:18px}.kpi span{display:block;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0}.kpi strong{display:block;margin-top:9px;font-size:26px;font-weight:700;line-height:1.15}.kpi em{display:block;margin-top:9px;color:var(--muted);font-style:normal;font-size:15px;line-height:1.4}
-    .grid{display:grid;gap:24px;margin-top:20px;align-items:start}.two,.three{grid-template-columns:minmax(0,1fr)}.panel{border-radius:6px;padding:26px;overflow:visible}.wide{margin-top:20px}.caption{margin:0 0 16px;color:var(--muted);font-size:17px;line-height:1.55;max-width:1040px}.section-label{margin:38px 0 14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--oxide);font-weight:700;text-transform:uppercase;font-size:15px;letter-spacing:0}
+    .grid{display:grid;gap:24px;margin-top:20px;align-items:start}.two,.three{grid-template-columns:minmax(0,1fr)}.panel{border-radius:6px;padding:26px}.wide{margin-top:20px}.caption{margin:0 0 16px;color:var(--muted);font-size:17px;line-height:1.55;max-width:1040px}.section-label{margin:38px 0 14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--oxide);font-weight:700;text-transform:uppercase;font-size:15px;letter-spacing:0}
     .year-controls{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}.year-controls button{appearance:none;border:1px solid var(--line);border-radius:999px;background:var(--mist);color:var(--ink);padding:9px 13px;font-size:15px;font-weight:700;cursor:pointer}.year-controls button[aria-pressed=true]{background:var(--signal);border-color:var(--signal);color:#031014}.year-chart[hidden]{display:none}
     .chart,.signal-strip{width:100%;height:auto;min-width:0;display:block}.chart-title{fill:#f4f7f8;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-weight:700;font-size:22px}.axis-label{fill:#a9b5bc;font-size:15px}.axis-note{fill:#a9b5bc;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px}.value-label{fill:#f2f8fb;font-size:15px;font-weight:700}.grid-line{stroke:rgba(255,255,255,.105);stroke-width:1}.axis-line{stroke:rgba(255,255,255,.32);stroke-width:1}.hover-target{cursor:help;outline:none;pointer-events:all}.hover-target:focus{filter:brightness(1.25)}.heatmap-mobile,.mobile-bars{display:none}.mobile-bars h3{font-size:22px;margin:0 0 12px}.mobile-bar-row{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1)}.mobile-bar-row:last-child{border-bottom:0}.mobile-bar-head{display:flex;justify-content:space-between;gap:14px;align-items:baseline;color:#f4f7f8;font-size:15px;line-height:1.3}.mobile-bar-head span{overflow-wrap:anywhere}.mobile-bar-head strong{font-size:15px;white-space:nowrap}.mobile-bar-track{display:block;height:8px;margin-top:7px;border-radius:999px;background:rgba(255,255,255,.10);overflow:hidden}.mobile-bar-track span{display:block;height:100%;border-radius:999px}
-    .chart-tooltip{position:fixed;left:0;top:0;z-index:50;max-width:min(320px,calc(100vw - 28px));padding:10px 12px;border:1px solid rgba(0,170,255,.55);border-radius:6px;background:rgba(5,8,10,.96);color:#f4f7f8;box-shadow:0 18px 48px rgba(0,0,0,.42);font-size:15px;font-weight:700;line-height:1.35;opacity:0;pointer-events:none;transform:translate(-9999px,-9999px);transition:opacity .08s ease}.chart-tooltip.is-visible{opacity:1}
-    table{width:100%;border-collapse:collapse;font-size:16px;line-height:1.45}th{text-align:left;color:#d9e5ea;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0;border-bottom:1px solid var(--signal);padding:12px 10px;white-space:normal}td{border-bottom:1px solid rgba(255,255,255,.08);padding:13px 10px;vertical-align:top;overflow-wrap:anywhere}tr:hover td{background:rgba(0,170,255,.07)}.table-wrap{overflow-x:visible}.sortable th{cursor:pointer}.sortable th[data-direction=asc]:after{content:" ↑";color:#7f8f96}.sortable th[data-direction=desc]:after{content:" ↓";color:#7f8f96}.empty{color:var(--muted)}
+    .chart-tooltip{position:fixed;left:0;top:0;z-index:50;max-width:min(320px,calc(100vw - 28px));padding:10px 12px;border:1px solid rgba(0,170,255,.55);border-radius:6px;background:rgba(5,8,10,.96);color:#f4f7f8;box-shadow:0 18px 48px rgba(0,0,0,.42);font-size:15px;font-weight:700;line-height:1.35;opacity:0;pointer-events:none;transform:translate(-9999px,-9999px);transition:opacity .08s ease}.chart-tooltip.is-open{opacity:1}
+    table{width:100%;border-collapse:collapse;font-size:16px;line-height:1.45}th{text-align:left;color:#d9e5ea;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0;border-bottom:1px solid var(--signal);padding:12px 10px;white-space:normal}td{border-bottom:1px solid rgba(255,255,255,.08);padding:13px 10px;vertical-align:top;overflow-wrap:anywhere}tr:hover td{background:rgba(0,170,255,.07)}.table-wrap{width:100%;max-width:100%}.sortable th{cursor:pointer}.sortable th[data-direction=asc]:after{content:" ↑";color:#7f8f96}.sortable th[data-direction=desc]:after{content:" ↓";color:#7f8f96}.empty{color:var(--muted)}
     .keyword-tabs>input{position:absolute;opacity:0;pointer-events:none}.tab-controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.tab-controls label{border:1px solid var(--line);border-radius:999px;padding:9px 12px;background:var(--mist);font-size:15px;font-weight:700;cursor:pointer}.tab-panel{display:none}#kw-mixed:checked~.tab-controls label[for=kw-mixed],#kw-user:checked~.tab-controls label[for=kw-user],#kw-assistant:checked~.tab-controls label[for=kw-assistant]{background:var(--ink);color:var(--paper);border-color:var(--ink)}#kw-mixed:checked~.tab-panels .kw-mixed-panel,#kw-user:checked~.tab-panels .kw-user-panel,#kw-assistant:checked~.tab-panels .kw-assistant-panel{display:block}
     footer{color:var(--muted);font-size:15px;margin-top:30px;padding-top:18px;border-top:2px solid var(--ink)}@media(max-width:1100px){.hero,.two,.three,.kpis{grid-template-columns:1fr}main{width:min(100vw - 24px,940px)}.hero-card{border-left:0;border-top:2px solid var(--ink);padding:16px 0 0}}
     @media(max-width:700px){main{width:calc(100% - 24px);padding-top:22px}.lede{font-size:19px}.hero-card strong{font-size:17px}.signal-strip{display:none}.panel{padding:18px;overflow:hidden}.heatmap-desktop,.chart-desktop{display:none}.heatmap-mobile,.mobile-bars{display:block}table,tbody,tr,td{display:block;width:100%}thead{display:none}tbody tr{border-bottom:1px solid rgba(255,255,255,.12);padding:10px 0}tbody tr:last-child{border-bottom:0}td{border-bottom:0;padding:8px 0;display:grid;grid-template-columns:minmax(98px,38%) minmax(0,1fr);gap:12px}td:before{content:attr(data-label);color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0}}
@@ -1173,12 +1173,12 @@ const showChartTooltip = (target, clientX, clientY) => {
   const text = target.dataset.tooltip;
   if (!text) return;
   chartTooltip.textContent = text;
-  chartTooltip.classList.add("is-visible");
+  chartTooltip.classList.add("is-open");
   moveChartTooltip(clientX, clientY);
 };
 
 const hideChartTooltip = () => {
-  chartTooltip.classList.remove("is-visible");
+  chartTooltip.classList.remove("is-open");
 };
 
 document.querySelectorAll("[data-tooltip]").forEach((target) => {
@@ -1276,8 +1276,8 @@ def main():
         "branches": sum(c["branches"] for c in data["conversations"]),
         "words": data["total_words"],
         "word_split": {
-            "user_visible_words": data["user_visible_words"],
-            "assistant_visible_words": data["assistant_visible_words"],
+            "user_message_words": data["user_message_words"],
+            "assistant_reply_words": data["assistant_reply_words"],
             "reasoning_words": data["reasoning_words"],
             "tool_words": data["tool_words"],
             "system_other_words": data["system_other_words"],

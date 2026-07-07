@@ -596,13 +596,13 @@ def analyze() -> dict[str, object]:
     response_latencies: list[float] = []
     total_messages = 0
     user_messages = 0
-    visible_assistant_messages = 0
-    visible_messages = 0
+    assistant_reply_messages = 0
+    transcript_messages = 0
     reasoning_messages = 0
     total_words = 0
     total_chars = 0
-    user_visible_words = 0
-    assistant_visible_words = 0
+    user_message_words = 0
+    assistant_reply_words = 0
     reasoning_words = 0
     tool_words = 0
     system_other_words = 0
@@ -623,10 +623,10 @@ def analyze() -> dict[str, object]:
                 monthly_conversations[month_key(created)] += 1
                 years[str(created.year)]["conversations"] += 1
             title_counter.update(prose_words(title))
-            visible_texts = [title]
+            transcript_texts = [title]
             ordered_roles: list[tuple[datetime, str]] = []
             conv_messages = 0
-            conv_visible = 0
+            conv_transcript_messages = 0
             conv_reasoning = 0
             conv_words = 0
             conv_chars = 0
@@ -664,17 +664,17 @@ def analyze() -> dict[str, object]:
                     conv_reasoning += 1
                     reasoning_words += word_count
                 elif role in {"user", "assistant"}:
-                    visible_messages += 1
-                    conv_visible += 1
-                    visible_texts.append(text)
+                    transcript_messages += 1
+                    conv_transcript_messages += 1
+                    transcript_texts.append(text)
                     prose_counter.update(prose)
                     if role == "user":
                         user_messages += 1
-                        user_visible_words += word_count
+                        user_message_words += word_count
                         user_prose_counter.update(prose)
                     else:
-                        visible_assistant_messages += 1
-                        assistant_visible_words += word_count
+                        assistant_reply_messages += 1
+                        assistant_reply_words += word_count
                         assistant_prose_counter.update(prose)
                 elif role == "tool":
                     tool_words += word_count
@@ -741,7 +741,7 @@ def analyze() -> dict[str, object]:
                         response_latencies.append(delta)
                     pending_user = None
 
-            token_set = set(prose_words("\n".join(visible_texts)))
+            token_set = set(prose_words("\n".join(transcript_texts)))
             conv_topics: list[str] = []
             for topic, keywords in TOPICS.items():
                 if token_set & keywords:
@@ -758,7 +758,7 @@ def analyze() -> dict[str, object]:
                     "created": created,
                     "updated": updated,
                     "messages": conv_messages,
-                    "visible_messages": conv_visible,
+                    "transcript_messages": conv_transcript_messages,
                     "reasoning_messages": conv_reasoning,
                     "words": conv_words,
                     "chars": conv_chars,
@@ -801,13 +801,13 @@ def analyze() -> dict[str, object]:
         "response_latencies": response_latencies,
         "total_messages": total_messages,
         "user_messages": user_messages,
-        "visible_assistant_messages": visible_assistant_messages,
-        "visible_messages": visible_messages,
+        "assistant_reply_messages": assistant_reply_messages,
+        "transcript_messages": transcript_messages,
         "reasoning_messages": reasoning_messages,
         "total_words": total_words,
         "total_chars": total_chars,
-        "user_visible_words": user_visible_words,
-        "assistant_visible_words": assistant_visible_words,
+        "user_message_words": user_message_words,
+        "assistant_reply_words": assistant_reply_words,
         "reasoning_words": reasoning_words,
         "tool_words": tool_words,
         "system_other_words": system_other_words,
@@ -859,8 +859,8 @@ def build_html(data: dict[str, object]) -> str:
     top_code = top(data["code_langs"], 10)
     top_models = top(data["models"], 8)
     word_split_rows = [
-        ("Your messages", int(data["user_visible_words"])),
-        ("ChatGPT replies", int(data["assistant_visible_words"])),
+        ("Your messages", int(data["user_message_words"])),
+        ("ChatGPT replies", int(data["assistant_reply_words"])),
         ("Reasoning and traces", int(data["reasoning_words"])),
         ("Tool messages", int(data["tool_words"])),
         ("System and other", int(data["system_other_words"])),
@@ -896,7 +896,7 @@ def build_html(data: dict[str, object]) -> str:
     badges = "".join(
         [
             badge("Conversations", human_int(len(conversations)), f"{human_int(total_branches)} total branches"),
-            badge("Your messages", human_int(data["user_messages"]), f"{human_int(data['visible_assistant_messages'])} ChatGPT replies"),
+            badge("Your messages", human_int(data["user_messages"]), f"{human_int(data['assistant_reply_messages'])} ChatGPT replies"),
             badge("Saved messages", human_int(data["total_messages"]), f"{human_int(data['reasoning_messages'])} reasoning traces"),
             badge("Active span", f"{first_date} onward", f"{human_int(len(active_dates))} days with a message from you"),
             badge("Longest daily streak", f"{human_int(streak_len)} days", f"{streak_start} to {streak_end}" if streak_start and streak_end else "no dated user messages"),
@@ -915,9 +915,9 @@ def build_html(data: dict[str, object]) -> str:
     h2{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:clamp(34px,3.45vw,54px);font-weight:800;line-height:1.05;margin:0 0 22px;text-transform:uppercase;letter-spacing:0;max-width:1220px} h3{font-size:25px;font-weight:700;margin:0 0 14px}.big-number{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:clamp(58px,7.5vw,96px);line-height:.95;margin:0;font-weight:800;color:var(--signal);letter-spacing:0}.sub{font-size:22px;color:var(--muted);line-height:1.52;max-width:960px}
     .badges{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:30px}.badge,.panel{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.028));border:1px solid var(--line);border-radius:6px;box-shadow:8px 8px 0 rgba(0,170,255,.08),0 18px 50px rgba(0,0,0,.3)}
     .badge{padding:19px}.badge span{display:block;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:0}.badge strong{display:block;margin-top:9px;font-size:28px;font-weight:700;line-height:1.12}.badge em{display:block;margin-top:9px;color:var(--muted);font-style:normal;font-size:16px;line-height:1.4}
-    .grid{display:grid;gap:26px;margin-top:30px}.two,.three{grid-template-columns:minmax(0,1fr)}.panel{padding:30px;overflow:visible}.statline{display:flex;justify-content:space-between;gap:16px;border-top:1px solid rgba(255,255,255,.12);padding:14px 0;color:var(--muted)}.statline strong{color:var(--ink)}
+    .grid{display:grid;gap:26px;margin-top:30px}.two,.three{grid-template-columns:minmax(0,1fr)}.panel{padding:30px}.statline{display:flex;justify-content:space-between;gap:16px;border-top:1px solid rgba(255,255,255,.12);padding:14px 0;color:var(--muted)}.statline strong{color:var(--ink)}
     .chart{width:100%;height:auto;min-width:0;display:block}.chart-title{fill:#f7fbff;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-weight:700;font-size:27px}.axis-label{fill:#abb6be;font-size:17px}.value-label{fill:#f7fbff;font-size:17px;font-weight:700}.grid-line{stroke:rgba(255,255,255,.14);stroke-width:1}.axis-line{stroke:rgba(255,255,255,.36);stroke-width:1}.hover-target{cursor:help;outline:none;pointer-events:all}.hover-target:focus{filter:brightness(1.25)}.heatmap-mobile,.mobile-bars{display:none}.mobile-bars h3{font-size:24px;margin:0 0 12px}.mobile-bar-row{padding:11px 0;border-bottom:1px solid rgba(255,255,255,.1)}.mobile-bar-row:last-child{border-bottom:0}.mobile-bar-head{display:flex;justify-content:space-between;gap:14px;align-items:baseline;color:#f7fbff;font-size:16px;line-height:1.3}.mobile-bar-head span{overflow-wrap:anywhere}.mobile-bar-head strong{font-size:16px;white-space:nowrap}.mobile-bar-track{display:block;height:9px;margin-top:8px;border-radius:999px;background:rgba(255,255,255,.10);overflow:hidden}.mobile-bar-track span{display:block;height:100%;border-radius:999px}
-    .chart-tooltip{position:fixed;left:0;top:0;z-index:50;max-width:min(320px,calc(100vw - 28px));padding:10px 12px;border:1px solid rgba(0,170,255,.55);border-radius:6px;background:rgba(5,8,10,.96);color:#f7fbff;box-shadow:0 18px 48px rgba(0,0,0,.42);font-size:15px;font-weight:700;line-height:1.35;opacity:0;pointer-events:none;transform:translate(-9999px,-9999px);transition:opacity .08s ease}.chart-tooltip.is-visible{opacity:1}
+    .chart-tooltip{position:fixed;left:0;top:0;z-index:50;max-width:min(320px,calc(100vw - 28px));padding:10px 12px;border:1px solid rgba(0,170,255,.55);border-radius:6px;background:rgba(5,8,10,.96);color:#f7fbff;box-shadow:0 18px 48px rgba(0,0,0,.42);font-size:15px;font-weight:700;line-height:1.35;opacity:0;pointer-events:none;transform:translate(-9999px,-9999px);transition:opacity .08s ease}.chart-tooltip.is-open{opacity:1}
     table{width:100%;border-collapse:collapse;font-size:18px;line-height:1.44}th{text-align:left;color:#dce9ef;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;font-weight:700;text-transform:uppercase;border-bottom:2px solid var(--signal);padding:14px 10px;letter-spacing:0;white-space:normal}td{border-bottom:1px solid rgba(255,255,255,.1);padding:15px 10px;vertical-align:top;color:#f7fbff;overflow-wrap:anywhere}.sortable th{cursor:pointer}.sortable th[data-direction=asc]:after{content:" ↑";color:#8ea0aa}.sortable th[data-direction=desc]:after{content:" ↓";color:#8ea0aa}.muted{color:var(--muted)}
     .keyword-tabs>input{position:absolute;opacity:0;pointer-events:none}.tab-controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.tab-controls label{border:1px solid var(--line);border-radius:999px;padding:10px 13px;background:var(--wash);font-size:15px;font-weight:700;cursor:pointer}.tab-panel{display:none}#kw-mixed:checked~.tab-controls label[for=kw-mixed],#kw-user:checked~.tab-controls label[for=kw-user],#kw-assistant:checked~.tab-controls label[for=kw-assistant]{background:var(--signal);color:#021014;border-color:var(--signal)}#kw-mixed:checked~.tab-panels .kw-mixed-panel,#kw-user:checked~.tab-panels .kw-user-panel,#kw-assistant:checked~.tab-panels .kw-assistant-panel{display:block}
     @media(max-width:980px){.badges,.two,.three{grid-template-columns:1fr}.panel{box-shadow:5px 5px 0 rgba(0,170,255,.08)}}
@@ -973,12 +973,12 @@ const showChartTooltip = (target, clientX, clientY) => {
   const text = target.dataset.tooltip;
   if (!text) return;
   chartTooltip.textContent = text;
-  chartTooltip.classList.add("is-visible");
+  chartTooltip.classList.add("is-open");
   moveChartTooltip(clientX, clientY);
 };
 
 const hideChartTooltip = () => {
-  chartTooltip.classList.remove("is-visible");
+  chartTooltip.classList.remove("is-open");
 };
 
 document.querySelectorAll("[data-tooltip]").forEach((target) => {
@@ -1044,7 +1044,7 @@ document.querySelectorAll("[data-tooltip]").forEach((target) => {
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>All-Time ChatGPT Wrapped</title><style>{css}</style></head><body><main>
 <section class="slide"><p class="eyebrow">All-Time ChatGPT Wrapped</p><h1 class="hero-title">ChatGPT history, all time</h1><p class="hero-copy">A full-history summary of your ChatGPT conversations from {esc(first_date)} onward. Export as of <span class="nowrap">{esc(last_date)}</span>.</p><div class="badges">{badges}</div></section>
-<section class="slide"><p class="eyebrow">The headline number</p><p class="big-number">{human_int(data['user_messages'])}</p><h2>messages you wrote</h2><p class="sub">The export also contains {human_int(data['visible_assistant_messages'])} ChatGPT replies and {human_int(data['reasoning_messages'])} reasoning traces. Activity peaks use messages you wrote.</p></section>
+<section class="slide"><p class="eyebrow">The headline number</p><p class="big-number">{human_int(data['user_messages'])}</p><h2>messages you wrote</h2><p class="sub">The export also contains {human_int(data['assistant_reply_messages'])} ChatGPT replies and {human_int(data['reasoning_messages'])} reasoning traces. Activity peaks use messages you wrote.</p></section>
 <section class="slide"><p class="eyebrow">Word accounting</p><h2>The words are split by source.</h2><p class="sub">Word totals cover your messages, ChatGPT replies, and reasoning traces as separate sources. Prose keyword charts use natural-language message text; code block languages and linked sites have their own charts.</p><div class="grid two"><div class="panel">{bar_chart(word_split_rows, 'Words by source', '#00AAFF')}</div><div class="panel">{table(['Source','Words','Share'], word_split_table)}</div></div></section>
 <section class="slide"><p class="eyebrow">Activity over time</p><h2>Messages by month</h2><div class="grid two"><div class="panel">{line_chart(month_rows, 'Your messages by month', '#00AAFF')}</div><div class="panel">{line_chart(cumulative_rows, 'Cumulative conversations', '#FF755F')}</div></div></section>
 <section class="slide"><p class="eyebrow">Busiest periods</p><h2>Peak activity based on your messages</h2><p class="sub">These peaks use timestamped messages authored by you. The 2026-03-16 spike across all saved messages comes mostly from reasoning traces.</p><div class="grid two"><div class="panel">{table(['Moment','When','Messages you wrote'], peak_rows)}</div><div class="panel">{bar_chart(weekday_rows, 'Your messages by weekday', '#FFC845')}</div></div><div class="panel" style="margin-top:18px">{table(['Metric','Meaning'], peak_definition_rows)}</div></section>
@@ -1114,14 +1114,14 @@ def main() -> None:
         "conversations": len(conversations),
         "messages": data["total_messages"],
         "user_messages": data["user_messages"],
-        "visible_assistant_messages": data["visible_assistant_messages"],
-        "visible_messages": data["visible_messages"],
+        "assistant_reply_messages": data["assistant_reply_messages"],
+        "transcript_messages": data["transcript_messages"],
         "reasoning_messages": data["reasoning_messages"],
         "branches": sum(int(c["branches"]) for c in conversations),
         "words": data["total_words"],
         "word_split": {
-            "user_visible_words": data["user_visible_words"],
-            "assistant_visible_words": data["assistant_visible_words"],
+            "user_message_words": data["user_message_words"],
+            "assistant_reply_words": data["assistant_reply_words"],
             "reasoning_words": data["reasoning_words"],
             "tool_words": data["tool_words"],
             "system_other_words": data["system_other_words"],
