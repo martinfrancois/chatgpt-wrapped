@@ -897,7 +897,7 @@ def build_html(data: dict[str, object]) -> str:
         [
             badge("Conversations", human_int(len(conversations)), f"{human_int(total_branches)} total branches"),
             badge("Your messages", human_int(data["user_messages"]), f"{human_int(data['visible_assistant_messages'])} ChatGPT replies"),
-            badge("Saved messages", human_int(data["total_messages"]), f"{human_int(data['reasoning_messages'])} reasoning traces kept separate"),
+            badge("Saved messages", human_int(data["total_messages"]), f"{human_int(data['reasoning_messages'])} reasoning traces"),
             badge("Active span", f"{first_date} onward", f"{human_int(len(active_dates))} days with a message from you"),
             badge("Longest daily streak", f"{human_int(streak_len)} days", f"{streak_start} to {streak_end}" if streak_start and streak_end else "no dated user messages"),
             badge("Median reply", human_duration(statistics.median(response_latencies) if response_latencies else None), f"slow replies around {human_duration(percentile(response_latencies, .9))}"),
@@ -1011,7 +1011,7 @@ document.querySelectorAll("[data-tooltip]").forEach((target) => {
         ],
         [
             "Conversations including code",
-            "Conversations where at least one code block or message saved as code was detected. This is not test coverage.",
+            "Conversations where at least one code block or message saved as code was detected.",
         ],
     ]
     peak_rows = [
@@ -1023,7 +1023,7 @@ document.querySelectorAll("[data-tooltip]").forEach((target) => {
     peak_definition_rows = [
         [
             "Messages you wrote",
-            "Peak moments in this section count only timestamped messages authored by you.",
+            "Peak moments in this section use timestamped messages authored by you.",
         ],
     ]
     biggest_messages = sorted(conversations, key=lambda c: int(c["messages"]), reverse=True)[:8]
@@ -1044,11 +1044,11 @@ document.querySelectorAll("[data-tooltip]").forEach((target) => {
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>All-Time ChatGPT Wrapped</title><style>{css}</style></head><body><main>
 <section class="slide"><p class="eyebrow">All-Time ChatGPT Wrapped</p><h1 class="hero-title">ChatGPT history, all time</h1><p class="hero-copy">A full-history summary of your ChatGPT conversations from {esc(first_date)} onward. Export as of <span class="nowrap">{esc(last_date)}</span>.</p><div class="badges">{badges}</div></section>
-<section class="slide"><p class="eyebrow">The headline number</p><p class="big-number">{human_int(data['user_messages'])}</p><h2>messages you wrote</h2><p class="sub">The export also contains {human_int(data['visible_assistant_messages'])} ChatGPT replies and {human_int(data['reasoning_messages'])} reasoning traces. Reasoning traces are kept separate from your activity peaks.</p></section>
-<section class="slide"><p class="eyebrow">Word accounting</p><h2>The words are split by source.</h2><p class="sub">Word totals cover all saved text. Prose keyword charts use conversation body text and filter out reasoning, URLs, code blocks, and common code tokens.</p><div class="grid two"><div class="panel">{bar_chart(word_split_rows, 'Words by source', '#00AAFF')}</div><div class="panel">{table(['Source','Words','Share'], word_split_table)}</div></div></section>
+<section class="slide"><p class="eyebrow">The headline number</p><p class="big-number">{human_int(data['user_messages'])}</p><h2>messages you wrote</h2><p class="sub">The export also contains {human_int(data['visible_assistant_messages'])} ChatGPT replies and {human_int(data['reasoning_messages'])} reasoning traces. Activity peaks use messages you wrote.</p></section>
+<section class="slide"><p class="eyebrow">Word accounting</p><h2>The words are split by source.</h2><p class="sub">Word totals cover your messages, ChatGPT replies, and reasoning traces as separate sources. Prose keyword charts use natural-language message text; code block languages and linked sites have their own charts.</p><div class="grid two"><div class="panel">{bar_chart(word_split_rows, 'Words by source', '#00AAFF')}</div><div class="panel">{table(['Source','Words','Share'], word_split_table)}</div></div></section>
 <section class="slide"><p class="eyebrow">Activity over time</p><h2>Messages by month</h2><div class="grid two"><div class="panel">{line_chart(month_rows, 'Your messages by month', '#00AAFF')}</div><div class="panel">{line_chart(cumulative_rows, 'Cumulative conversations', '#FF755F')}</div></div></section>
-<section class="slide"><p class="eyebrow">Busiest periods</p><h2>Peak activity based on your messages</h2><p class="sub">These peaks count only timestamped messages authored by you. The 2026-03-16 spike across all saved messages is mostly reasoning traces, not thousands of messages you wrote.</p><div class="grid two"><div class="panel">{table(['Moment','When','Messages you wrote'], peak_rows)}</div><div class="panel">{bar_chart(weekday_rows, 'Your messages by weekday', '#FFC845')}</div></div><div class="panel" style="margin-top:18px">{table(['Metric','Meaning'], peak_definition_rows)}</div></section>
-<section class="slide"><p class="eyebrow">Local time</p><h2>Your message heatmap</h2><p class="sub">Each square is the total number of messages you wrote in that weekday and hour across the whole export. It is not an average, median, or maximum; brighter cells are closer to the busiest weekday/hour bucket.</p><div class="panel">{heatmap(data['user_weekday_hour'])}</div></section>
+<section class="slide"><p class="eyebrow">Busiest periods</p><h2>Peak activity based on your messages</h2><p class="sub">These peaks use timestamped messages authored by you. The 2026-03-16 spike across all saved messages comes mostly from reasoning traces.</p><div class="grid two"><div class="panel">{table(['Moment','When','Messages you wrote'], peak_rows)}</div><div class="panel">{bar_chart(weekday_rows, 'Your messages by weekday', '#FFC845')}</div></div><div class="panel" style="margin-top:18px">{table(['Metric','Meaning'], peak_definition_rows)}</div></section>
+<section class="slide"><p class="eyebrow">Local time</p><h2>Your message heatmap</h2><p class="sub">Each square is the total number of messages you wrote in that weekday and hour across the whole export. Brighter cells are closer to the busiest weekday/hour bucket.</p><div class="panel">{heatmap(data['user_weekday_hour'])}</div></section>
 <section class="slide"><p class="eyebrow">Conversation size</p><h2>Conversation size</h2><div class="panel">{table(['Metric','Value'], shape_rows)}</div><div class="panel" style="margin-top:18px">{table(['Metric','Meaning'], shape_definition_rows)}</div></section>
 <section class="slide"><p class="eyebrow">Topics</p><h2>Recurring topics</h2><div class="grid two"><div class="panel">{bar_chart(top_topics, 'Conversation topics', '#00AAFF')}</div><div class="panel">{keyword_tabs(top_words, top_user_words, top_assistant_words)}</div></div></section>
 <section class="slide"><p class="eyebrow">Titles and models</p><h2>Conversation titles and models</h2><div class="grid two"><div class="panel">{bar_chart(top_title_words, 'Title keywords', '#00AAFF')}</div><div class="panel">{bar_chart(top_models, 'Most used models by conversation', '#FFC845')}</div></div></section>
