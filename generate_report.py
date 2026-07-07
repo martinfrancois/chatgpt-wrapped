@@ -998,7 +998,7 @@ def build_html(data):
         kpi("Conversations", human_int(len(conversations)), f"{human_int(branches)} total branch versions"),
         kpi("Your messages", human_int(data["user_message_total"]), f"{human_int(active_user_days)} days with at least one message from you"),
         kpi("ChatGPT replies", human_int(visible_assistant_messages), f"{human_int(data['reasoning_total'])} reasoning traces"),
-        kpi("Busiest day for you", human_int(peak_user_day[1]), f"{peak_user_day[0]}"),
+        kpi("Most messages in one day", f"{human_int(peak_user_day[1])} messages", f"you wrote on {peak_user_day[0]}"),
         kpi("Longest daily streak", f"{human_int(streak_len)} days", f"{streak_start} to {streak_end}" if streak_start and streak_end else "no dated user messages"),
         kpi("All saved words", human_int(data["total_words"]), "split by source below"),
         kpi("Assistant response time", f"{human_duration(percentile(data['response_latencies'], .5))} / {human_duration(percentile(data['response_latencies'], .9))} / {human_duration(percentile(data['response_latencies'], .99))}", f"median / 90th / 99th percentile across {human_int(len(data['response_latencies']))} replies"),
