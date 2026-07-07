@@ -445,15 +445,15 @@ def heatmap(matrix, title, unit_label="your messages"):
     cell_w, cell_h = 39, 30
     max_value = max(matrix.values()) if matrix else 1
 
-    def heat_color(value):
+    def heat_attrs(value):
         if value == 0:
-            return '#182024" stroke="#33424a" stroke-width="1"'
+            return 'fill="#182024" stroke="#33424a" stroke-width="1"'
         opacity = 0.18 + 0.82 * (value / max_value if max_value else 0)
-        return f'#00AAFF" opacity="{opacity:.3f}'
+        return f'fill="#00AAFF" opacity="{opacity:.3f}"'
 
     parts = [f'<svg role="img" aria-label="{esc(title)}" viewBox="0 0 {width} {height}" class="chart">']
     parts.append(f'<text x="0" y="20" class="chart-title">{esc(title)}</text>')
-    parts.append(f'<text x="{left + 24 * cell_w / 2:.1f}" y="40" text-anchor="middle" class="axis-note">Hour of day, Europe/Zurich</text>')
+    parts.append(f'<text x="{left + 24 * cell_w / 2:.1f}" y="40" text-anchor="middle" class="axis-note">Hour of day; each cell is a total count across the export</text>')
     for hour in range(24):
         if hour % 3 == 0:
             parts.append(f'<text x="{left + hour * cell_w + cell_w/2:.1f}" y="62" text-anchor="middle" class="axis-label">{hour:02d}</text>')
@@ -465,7 +465,7 @@ def heatmap(matrix, title, unit_label="your messages"):
             tooltip = f"{day} {hour:02d}:00 - {value} {unit_label}"
             parts.append(
                 f'<rect class="hover-target" {tooltip_attr(tooltip)} x="{left + hour * cell_w}" y="{y}" '
-                f'width="{cell_w - 4}" height="{cell_h - 4}" rx="3" fill="{heat_color(value)}"/>'
+                f'width="{cell_w - 4}" height="{cell_h - 4}" rx="3" {heat_attrs(value)}/>'
             )
     legend_y = top_pad + len(days) * cell_h + 18
     legend_values = [0]
@@ -476,12 +476,12 @@ def heatmap(matrix, title, unit_label="your messages"):
     for value in legend_values:
         if value not in deduped_legend:
             deduped_legend.append(value)
-    parts.append(f'<text x="{left}" y="{legend_y}" class="axis-label">Legend: {esc(unit_label)} per weekday/hour bucket</text>')
+    parts.append(f'<text x="{left}" y="{legend_y}" class="axis-label">Legend: total {esc(unit_label)} in each weekday/hour bucket; peak sets the color scale</text>')
     for index, value in enumerate(deduped_legend):
         x_pos = left + index * 145
         parts.append(
             f'<rect class="hover-target" {tooltip_attr(f"{value} {unit_label}")} x="{x_pos}" '
-            f'y="{legend_y + 12}" width="24" height="18" rx="3" fill="{heat_color(value)}"/>'
+            f'y="{legend_y + 12}" width="24" height="18" rx="3" {heat_attrs(value)}/>'
         )
         label = "0" if value == 0 else ("peak " + human_int(value) if value == max_value else human_int(value))
         parts.append(f'<text x="{x_pos + 32}" y="{legend_y + 26}" class="axis-label">{esc(label)}</text>')
@@ -1208,7 +1208,7 @@ document.querySelectorAll("[data-tooltip]").forEach((target) => {
 <p class="section-label">Activity</p>
 <section class="grid two"><div class="panel">{line_chart(monthly_user_messages, 'Your messages by month', '#00AAFF', 'Messages you wrote')}</div><div class="panel">{line_chart(monthly_conversations, 'Conversations created by month', '#FF755F', 'Conversations')}</div></section>
 <section class="grid two"><div class="panel">{line_chart(cumulative_conversations, 'Cumulative conversation count', '#A7B1BD', 'Conversations')}</div><div class="panel">{bar_chart(weekday_rows, 'Your messages by weekday', '#FFC845', label_width=90, x_axis_label='Messages you wrote')}</div></section>
-<section class="panel wide">{heatmap(data['user_weekday_hour'], 'Your message activity by weekday and hour, Europe/Zurich', 'messages you wrote')}</section>
+<section class="panel wide"><p class="caption">Each square is the total number of messages you wrote in that weekday and hour across the whole export, converted to Europe/Zurich. It is not an average, median, or maximum; brighter cells are closer to the busiest weekday/hour bucket.</p>{heatmap(data['user_weekday_hour'], 'Your message activity by weekday and hour, Europe/Zurich', 'messages you wrote')}</section>
 <p class="section-label">Conversation size and branches</p>
 <section class="grid two"><div class="panel">{histogram(message_counts, [1,2,4,8,16,32,64,128,256,512,1_000_000_000], 'How many messages conversations contain', '#00AAFF', 'Conversations', 'Saved messages')}</div><div class="panel"><p class="caption">Alternate branches are complete conversation paths. Shared messages are counted once, even when they appear in more than one branch.</p>{histogram(branch_counts, [1,2,3,4,5,8,13,21,34,55,1_000_000_000], 'Alternate branches per conversation', '#FF755F', 'Conversations', 'Branches')}</div></section>
 <section class="grid two"><div class="panel">{histogram(durations, [0,.5,1,6,24,72,168,720,2160,8760,1_000_000_000], 'How long conversations lasted', '#A7B1BD', 'Conversations', 'Hours from first to last update')}</div><div class="panel">{histogram(data['response_latencies'], [0,2,5,10,30,60,120,300,600,1800,3600,86400], 'How long ChatGPT took to reply', '#FFC845', 'Replies', 'Seconds')}</div></section>

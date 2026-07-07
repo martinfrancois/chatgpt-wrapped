@@ -408,14 +408,14 @@ def heatmap(matrix: dict[tuple[int, int], int], unit_label: str = "messages you 
     cell_w, cell_h = 40, 34
     max_value = max(matrix.values()) if matrix else 1
 
-    def heat_color(value: int) -> str:
+    def heat_attrs(value: int) -> str:
         if value == 0:
-            return '#101820" stroke="rgba(255,255,255,.26)" stroke-width="1"'
+            return 'fill="#101820" stroke="rgba(255,255,255,.26)" stroke-width="1"'
         opacity = 0.20 + 0.80 * (value / max_value if max_value else 0)
-        return f'#00AAFF" opacity="{opacity:.3f}'
+        return f'fill="#00AAFF" opacity="{opacity:.3f}"'
 
     parts = [f'<svg class="chart" role="img" aria-label="Message activity heatmap" viewBox="0 0 {width} {height}">']
-    parts.append('<text x="0" y="22" class="chart-title">Your message rhythm, by local time</text>')
+    parts.append('<text x="0" y="22" class="chart-title">Your messages by weekday and hour, total count</text>')
     for hour in range(24):
         if hour % 3 == 0:
             parts.append(f'<text x="{left + hour * cell_w + cell_w / 2:.1f}" y="48" text-anchor="middle" class="axis-label">{hour:02d}</text>')
@@ -427,7 +427,7 @@ def heatmap(matrix: dict[tuple[int, int], int], unit_label: str = "messages you 
             tooltip = f"{day_name} {hour:02d}:00, {value} {unit_label}"
             parts.append(
                 f'<rect class="hover-target" {tooltip_attr(tooltip)} x="{left + hour * cell_w}" y="{y}" '
-                f'width="{cell_w - 4}" height="{cell_h - 4}" rx="7" fill="{heat_color(value)}"/>'
+                f'width="{cell_w - 4}" height="{cell_h - 4}" rx="7" {heat_attrs(value)}/>'
             )
     legend_y = top_pad + len(days) * cell_h + 20
     legend_values = [0]
@@ -438,12 +438,12 @@ def heatmap(matrix: dict[tuple[int, int], int], unit_label: str = "messages you 
     for value in legend_values:
         if value not in deduped_legend:
             deduped_legend.append(value)
-    parts.append(f'<text x="{left}" y="{legend_y}" class="axis-label">Legend: {esc(unit_label)} per weekday/hour bucket</text>')
+    parts.append(f'<text x="{left}" y="{legend_y}" class="axis-label">Legend: total {esc(unit_label)} in each weekday/hour bucket; peak sets the color scale</text>')
     for index, value in enumerate(deduped_legend):
         x_pos = left + index * 170
         parts.append(
             f'<rect class="hover-target" {tooltip_attr(f"{value} {unit_label}")} x="{x_pos}" '
-            f'y="{legend_y + 13}" width="30" height="22" rx="7" fill="{heat_color(value)}"/>'
+            f'y="{legend_y + 13}" width="30" height="22" rx="7" {heat_attrs(value)}/>'
         )
         label = "0" if value == 0 else ("peak " + human_int(value) if value == max_value else human_int(value))
         parts.append(f'<text x="{x_pos + 39}" y="{legend_y + 30}" class="axis-label">{esc(label)}</text>')
@@ -975,7 +975,7 @@ document.querySelectorAll("[data-tooltip]").forEach((target) => {
 <section class="slide"><p class="eyebrow">Word accounting</p><h2>The words are split by source.</h2><p class="sub">Word totals cover all saved text. Prose keyword charts use conversation body text and filter out reasoning, URLs, code blocks, and common code tokens.</p><div class="grid two"><div class="panel">{bar_chart(word_split_rows, 'Words by source', '#00AAFF')}</div><div class="panel">{table(['Source','Words','Share'], word_split_table)}</div></div></section>
 <section class="slide"><p class="eyebrow">Activity over time</p><h2>Messages by month</h2><div class="grid two"><div class="panel">{line_chart(month_rows, 'Your messages by month', '#00AAFF')}</div><div class="panel">{line_chart(cumulative_rows, 'Cumulative conversations', '#FF755F')}</div></div></section>
 <section class="slide"><p class="eyebrow">Busiest periods</p><h2>Peak activity based on your messages</h2><p class="sub">These peaks count only timestamped messages authored by you. The 2026-03-16 spike across all saved messages is mostly reasoning traces, not thousands of messages you wrote.</p><div class="grid two"><div class="panel">{table(['Moment','When','Messages you wrote'], peak_rows)}</div><div class="panel">{bar_chart(weekday_rows, 'Your messages by weekday', '#FFC845')}</div></div><div class="panel" style="margin-top:18px">{table(['Metric','Meaning'], peak_definition_rows)}</div></section>
-<section class="slide"><p class="eyebrow">Local time</p><h2>Your message heatmap</h2><div class="panel">{heatmap(data['user_weekday_hour'])}</div></section>
+<section class="slide"><p class="eyebrow">Local time</p><h2>Your message heatmap</h2><p class="sub">Each square is the total number of messages you wrote in that weekday and hour across the whole export. It is not an average, median, or maximum; brighter cells are closer to the busiest weekday/hour bucket.</p><div class="panel">{heatmap(data['user_weekday_hour'])}</div></section>
 <section class="slide"><p class="eyebrow">Conversation size</p><h2>Conversation size</h2><div class="panel">{table(['Metric','Value'], shape_rows)}</div><div class="panel" style="margin-top:18px">{table(['Metric','Meaning'], shape_definition_rows)}</div></section>
 <section class="slide"><p class="eyebrow">Topics</p><h2>Recurring topics</h2><div class="grid two"><div class="panel">{bar_chart(top_topics, 'Conversation topics', '#00AAFF')}</div><div class="panel">{keyword_tabs(top_words, top_user_words, top_assistant_words)}</div></div></section>
 <section class="slide"><p class="eyebrow">Titles and models</p><h2>Conversation titles and models</h2><div class="grid two"><div class="panel">{bar_chart(top_title_words, 'Title keywords', '#00AAFF')}</div><div class="panel">{bar_chart(top_models, 'Most used models by conversation', '#FFC845')}</div></div></section>
