@@ -1195,7 +1195,7 @@ document.querySelectorAll("[data-tooltip]").forEach((target) => {
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ChatGPT Conversation Field Report</title><style>{css}</style></head><body><main>
-<section class="hero"><div><p class="eyebrow">ChatGPT Conversation Field Report</p><h1>Conversation history report</h1><p class="lede">A full-history analysis of your ChatGPT conversations, focused on messages you wrote, with assistant reasoning traces kept separate so spikes and word counts stay legible.</p></div><div class="hero-card"><strong>Export as of {esc(latest_label)}</strong><p>Conversation range starts {esc(first_label)}. Charts use totals; leaderboard tables may include private conversation titles.</p></div></section>
+<section class="hero"><div><p class="eyebrow">ChatGPT Conversation Field Report</p><h1>Conversation history report</h1><p class="lede">A full-history analysis of your ChatGPT conversations, focused on messages you wrote, with assistant reasoning traces kept separate so spikes and word counts stay legible.</p></div><div class="hero-card"><strong>Export as of {esc(latest_label)}</strong><p>Conversation range starts {esc(first_label)}. Charts use totals.</p></div></section>
 {signal_strip(monthly_user_messages, 'Messages you wrote by month')}
 <section class="kpis">{cards}</section>
 <p class="section-label">Words by source</p>
