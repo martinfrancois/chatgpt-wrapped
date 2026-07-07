@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chatgpt-wrapped"
+version = "0.1.0"
+description = "Generate local HTML reports from a ChatGPT data export."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = []
+keywords = ["chatgpt", "export", "wrapped", "report", "visualization"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Text Processing",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+chatgpt-wrapped-report = "generate_report:main"
+chatgpt-wrapped-all-time = "generate_wrapped:main"
+
+[tool.setuptools]
+py-modules = ["extract_chatgpt_markdown", "generate_report", "generate_wrapped"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

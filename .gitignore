@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.coverage
+.DS_Store
+*.py[cod]
+*.egg-info/
+
+# Generated reports and machine-readable summaries can contain private data.
+output/
+private-output/
+
+# ChatGPT export files can contain private data.
+conversations.json
+conversations-*.json
+chat.html
+file-*.dat
+file_*.dat
+extracted*/
