@@ -10,4 +10,5 @@ This repository contains reusable scripts for generating local, private HTML rep
 - Preserve hover tooltips, readable chart text, dark-mode-first styling, and year-by-year controls when changing the reports.
 - Heatmaps must state whether cells are totals, averages, medians, or maxima. The current local-time heatmaps use total message counts per weekday/hour bucket, with color scaled against the busiest bucket.
 - Bar charts should render as SVG on desktop and as readable mobile bar lists on narrow screens. Do not reintroduce tiny mobile SVG axis labels or horizontal chart scrolling.
+- Line-chart x-axis titles such as "Month" should sit below the tick labels, not above date labels such as "2025-07".
 - Generated JSON stats should stay available beside the HTML outputs for programmatic use.

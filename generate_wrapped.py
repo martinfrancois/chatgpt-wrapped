@@ -411,8 +411,8 @@ def line_chart(items: list[tuple[str, int]], title: str, color: str) -> str:
         )
     step = max(1, len(items) // 7)
     for i in range(0, len(items), step):
-        parts.append(f'<text x="{x(i):.1f}" y="{height - 18}" text-anchor="middle" class="axis-label">{esc(items[i][0])}</text>')
-    parts.append(f'<text x="{left + chart_w / 2:.1f}" y="{height - 48}" text-anchor="middle" class="axis-label">Month</text>')
+        parts.append(f'<text x="{x(i):.1f}" y="{height - 42}" text-anchor="middle" class="axis-label">{esc(items[i][0])}</text>')
+    parts.append(f'<text x="{left + chart_w / 2:.1f}" y="{height - 14}" text-anchor="middle" class="axis-label">Month</text>')
     parts.append("</svg>")
     return "".join(parts)
 

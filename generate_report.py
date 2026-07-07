@@ -447,8 +447,8 @@ def line_chart(items, title, color="#00AAFF", y_axis_label="Count"):
         )
     step = max(1, len(items) // 8)
     for i in range(0, len(items), step):
-        parts.append(f'<text x="{x(i):.1f}" y="{height - 16}" text-anchor="middle" class="axis-label">{esc(items[i][0])}</text>')
-    parts.append(f'<text x="{left + chart_w / 2:.1f}" y="{height - 44}" text-anchor="middle" class="axis-note">Month</text>')
+        parts.append(f'<text x="{x(i):.1f}" y="{height - 42}" text-anchor="middle" class="axis-label">{esc(items[i][0])}</text>')
+    parts.append(f'<text x="{left + chart_w / 2:.1f}" y="{height - 14}" text-anchor="middle" class="axis-note">Month</text>')
     parts.append(f'<text x="18" y="{top_pad + chart_h / 2:.1f}" transform="rotate(-90 18 {top_pad + chart_h / 2:.1f})" text-anchor="middle" class="axis-note">{esc(y_axis_label)}</text>')
     parts.append("</svg>")
     return "".join(parts)
