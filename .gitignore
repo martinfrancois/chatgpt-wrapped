@@ -17,3 +17,6 @@ chat.html
 file-*.dat
 file_*.dat
 extracted*/
+
+# This committed example contains invented conversations only.
+!examples/synthetic-export/conversations.json

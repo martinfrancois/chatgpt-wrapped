@@ -22,7 +22,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = ["pytest==9.1.1"]
 
 [project.scripts]
 chatgpt-wrapped-report = "generate_report:main"

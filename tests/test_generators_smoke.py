@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import json
+import html
 import subprocess
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
+
+import pytest
 
 
 def message(
@@ -142,3 +146,50 @@ def test_generators_create_html_and_json_from_synthetic_export(tmp_path: Path) -
     assert "ChatGPT history, all time" in wrapped_html.read_text(encoding="utf-8")
     assert json.loads(report_stats.read_text(encoding="utf-8"))["conversations"] == 1
     assert json.loads(wrapped_stats.read_text(encoding="utf-8"))["conversations"] == 1
+
+
+@pytest.mark.parametrize(
+    ("module", "filename"),
+    [
+        ("generate_report", "chatgpt-conversation-report.html"),
+        ("generate_wrapped", "chatgpt-wrapped-all-time.html"),
+    ],
+)
+def test_reports_escape_export_text_and_load_no_external_resources(
+    tmp_path: Path, module: str, filename: str
+) -> None:
+    # Given
+    repo_root = Path(__file__).resolve().parents[1]
+    export_dir = tmp_path / "Conversations"
+    write_synthetic_export(export_dir)
+    source = export_dir / "conversations-000.json"
+    conversations = json.loads(source.read_text(encoding="utf-8"))
+    payload = (
+        '</script><script>window.fixtureExecuted = true</script>'
+        '<img src="https://example.test/tracker" onerror="alert(1)">'
+    )
+    conversations[0]["title"] = payload
+    conversations[0]["default_model_slug"] = payload
+    source.write_text(json.dumps(conversations), encoding="utf-8")
+    output_dir = tmp_path / "output"
+
+    # When
+    run_command(
+        [sys.executable, "-m", module, str(export_dir),
+         "--output-dir", str(output_dir), "--timezone", "UTC"],
+        repo_root,
+    )
+    document = (output_dir / filename).read_text(encoding="utf-8")
+
+    # Then
+    assert payload not in document
+    assert html.escape(payload, quote=True) in document
+
+    class ReportParser(HTMLParser):
+        def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+            assert tag not in {"img", "iframe", "object", "embed"}
+            for name, _ in attrs:
+                assert not name.startswith("on")
+                assert name not in {"src", "href", "xlink:href"}
+
+    ReportParser().feed(document)
